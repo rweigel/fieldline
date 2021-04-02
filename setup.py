@@ -1,6 +1,6 @@
 from setuptools import setup, find_packages
 
-install_requires = ["vtk"]
+install_requires = ["numpy","scipy","vtk","matplotlib","mpl_toolkits"]
 
 setup(
     name='fieldline',
@@ -10,3 +10,4 @@ setup(
     packages=find_packages(),
     description='Field line tracing using multiple methods and libraries',
     install_requires=install_requires
+     )

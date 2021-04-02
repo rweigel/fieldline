@@ -4,11 +4,6 @@ import numpy as np
 from mpl_toolkits.mplot3d import Axes3D
 import matplotlib.pyplot as plt
 
-import trace
-sys.path.append(os.path.dirname(os.path.abspath(__file__)) + '/../swmf_file_reader/')
-import read_swmf_files as rswmf
-
-
 
 def demo1(fname):
     '''

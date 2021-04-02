@@ -1,11 +1,15 @@
 import os
 import sys
 import numpy as np
-
 import vtk
 from vtk.numpy_interface import dataset_adapter as dsa
 from vtk.vtkCommonDataModel import vtkDataSet
 from vtk.vtkCommonExecutionModel import vtkAlgorithmOutput
+
+import trace
+sys.path.append(os.path.dirname(os.path.abspath(__file__)) + '/../swmf_file_reader/')
+import read_swmf_files as rswmf
+
 
 def trace(IC, Field, debug=False):
     import types
