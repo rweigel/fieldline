@@ -4,7 +4,7 @@ import numpy as np
 from mpl_toolkits.mplot3d import Axes3D
 import matplotlib.pyplot as plt
 
-from trace import trace
+from fieldline import trace
 
 def demo1(fname):
     '''
