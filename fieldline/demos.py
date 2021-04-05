@@ -1,0 +1,149 @@
+import os
+import sys
+import numpy as np
+from mpl_toolkits.mplot3d import Axes3D
+import matplotlib.pyplot as plt
+
+from fieldline import trace
+
+
+def urlretrieve(url, fname):
+    print('\ndownloading %s from %s\n'%(fname,url))
+    import urllib, urllib2, ssl
+    try:
+        context = ssl._create_unverified_context()
+        urllib2.urlopen(url) 
+        res = urllib.urlretrieve(url, fname, context=context)
+        return res
+#https://stackoverflow.com/questions/16778435/python-check-if-website-exists
+    except urllib2.HTTPError, e: 
+        return(e.code)
+    except urllib2.URLError, e:
+        return(e.args)
+    except ValueError:
+        print("'" + url + "' is not a valid URL")
+
+
+def demo1(fname=None):
+    '''
+    inputs: fname
+        set to the filename (including path if specified) of the swmf .out file
+        e.g. '/home/gary/temp/3d__var_3_e20031120-070000-000.out'
+        default: None, which downloads an example file from the internet
+    '''
+    ## download example data file if none provided
+    if fname is None:
+        fname = '/tmp/3d__var_2_e20190902-041000-000.out' #!!! doesn't work for windows
+        if not os.path.exists(fname):
+            urlname = 'http://mag.gmu.edu/git-data/GaryQ-Physics/demodata/3d__var_2_e20190902-041000-000.out'
+            urlretrieve(urlname, fname)
+
+    ## set seed points
+    IC = np.column_stack([-np.ones(17), np.linspace(-1.,1.,17), np.linspace(-1.,1.,17)])
+
+    ## trace 
+    scipy_NearestNeighbor_method = trace.trace_file(IC, fname, method='scipy', debug=False)
+
+    ## plot the result
+    fig = plt.figure()
+    ax = fig.add_subplot(111, projection='3d')
+
+    for i in range(IC.shape[0]):
+        ax.plot(scipy_NearestNeighbor_method[i][:,0],
+                scipy_NearestNeighbor_method[i][:,1],
+                scipy_NearestNeighbor_method[i][:,2],
+                color='b')
+
+    ax.plot(IC[:,0],
+            IC[:,1],
+            IC[:,2],
+            color='r')
+
+    ax.plot(np.array([0.]),
+            np.array([0.]),
+            np.array([0.]),
+            color='r',
+            marker='o')
+
+    ax.set_xlim(-4.,4.)
+    ax.set_ylim(-4.,4.)
+    ax.set_zlim(-4.,4.)
+
+    plt.show()
+    plt.clf()
+
+
+def demo2(ftag=None):
+    '''
+    inputs: ftag
+        set to the filename (including path if specified) of the swmf files, without the extension.
+        e.g. '/home/gary/temp/3d__var_3_e20031120-070000-000'
+        default: None, which downloads example files from the internet
+
+    traces field line with seed points along a line connecting (-1,1,1) and (-1,-1,-1) in GSM
+    in resuling plot:
+        red   : shows the seed points line, and the location of the origin (0,0,0)
+        blue  : shows the result of tracing via scipy's nearest neighbor interpolator on native grid
+        green : shows the result of vtk's interpolation.
+    '''
+    from swmf_file_reader import read_swmf_files as rswmf
+
+    ## download example data files if none provided
+    if ftag is None:
+        ftag = '/tmp/3d__var_2_e20190902-041000-000' #!!! doesn't work for windows
+        if not os.path.exists(ftag+'.info'):
+            urltag = 'http://mag.gmu.edu/git-data/GaryQ-Physics/demodata/3d__var_2_e20190902-041000-000'
+            urlretrieve(urltag+'.info', ftag+'.info')
+            urlretrieve(urltag+'.tree', ftag+'.tree')
+            urlretrieve(urltag+'.out' , ftag+'.out' )
+
+    ## set seed points
+    IC = np.column_stack([-np.ones(17), np.linspace(-1.,1.,17), np.linspace(-1.,1.,17)])
+
+    ## if not already existing, make vtk file from swmf .out file, to be used in tracing
+    if not os.path.exists(ftag+'.vtk'):
+        print('\n\ngenerating vtk file\n\n')
+        rswmf.swmf2vtk(ftag)
+    else:
+        print('\n\nusing existing vtk file\n\n')
+
+    ## trace 
+    scipy_NearestNeighbor_method = trace.trace_file(IC, ftag+'.out', method='scipy', debug=False)
+    vtk_method                   = trace.trace_file(IC, ftag+'.vtk', method='vtk', debug=False)
+
+    ## plot the result
+    fig = plt.figure()
+    ax = fig.add_subplot(111, projection='3d')
+
+    for i in range(IC.shape[0]):
+        ax.plot(scipy_NearestNeighbor_method[i][:,0],
+                scipy_NearestNeighbor_method[i][:,1],
+                scipy_NearestNeighbor_method[i][:,2],
+                color='b')
+
+        ax.plot(vtk_method[i][:,0],
+                vtk_method[i][:,1],
+                vtk_method[i][:,2],
+                color='g')
+
+    ax.plot(IC[:,0],
+            IC[:,1],
+            IC[:,2],
+            color='r')
+
+    ax.plot(np.array([0.]),
+            np.array([0.]),
+            np.array([0.]),
+            color='r',
+            marker='o')
+
+    ax.set_xlim(-4.,4.)
+    ax.set_ylim(-4.,4.)
+    ax.set_zlim(-4.,4.)
+
+    plt.show()
+    plt.clf()
+
+
+def demo3(fname=None):
+    kameleon_method = trace.trace_file(IC, fname+'.cdf', method='kameleon', debug=True)
