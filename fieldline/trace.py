@@ -6,9 +6,6 @@ from vtk.numpy_interface import dataset_adapter as dsa
 from vtk.vtkCommonDataModel import vtkDataSet
 from vtk.vtkCommonExecutionModel import vtkAlgorithmOutput
 
-#sys.path.append(os.path.dirname(os.path.abspath(__file__)) + '/../swmf_file_reader/')
-from swmf_file_reader import read_swmf_files as rswmf
-
 
 def trace(IC, Field, debug=False):
     import types
@@ -210,11 +207,11 @@ def trace_file(IC, filename, method='vtk', debug=False):
             VTKfilename = filename[:-4]+'.vtk'
 
             ## if not already existing, make vtk file from swmf .out file, to be used in tracing
-            if not os.path.exists(fname[:-4]+'.vtk'):
-                print('\n\ngenerating vtk file\n\n')
-                rswmf.swmf2vtk(fname[:-4])
-            else:
-                print('\n\nusing existing vtk file\n\n')
+            #if not os.path.exists(fname[:-4]+'.vtk'):
+            #    print('\n\ngenerating vtk file\n\n')
+            #    rswmf.swmf2vtk(fname[:-4])
+            #else:
+            #    print('\n\nusing existing vtk file\n\n')
 
             return traceFile(VTKfilename, IC, method=method, debug=debug)
         elif ext == '.cdf':

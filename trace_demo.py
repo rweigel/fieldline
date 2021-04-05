@@ -6,7 +6,7 @@ import matplotlib.pyplot as plt
 
 from fieldline import trace
 
-def demo1(fname):
+def demo(fname):
     '''
     traces field line with seed points along a line connecting (-1,1,1) and (-1,-1,-1) in GSM
     in resuling plot:
@@ -54,12 +54,8 @@ def demo1(fname):
     plt.show()
 
 
-def demo2(fname):
-    kameleon_method = trace.trace_file(IC, fname+'.cdf', method='kameleon', debug=True)
-
-
 if __name__=='__main__':
     fname = '/home/gary/temp/'+'3d__var_3_e20031120-070000-000.out'
-    demo1(fname)
+    demo(fname)
 
 

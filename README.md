@@ -10,7 +10,7 @@ which will not be automatically installed since it is not on PyPi.
 
 As such, you need to follow the installation instructions at
 ![https://github.com/GaryQ-physics/swmf_file_reader](https://github.com/GaryQ-physics/swmf_file_reader)
-befor continuing
+before continuing
 
 for user:
 ```
