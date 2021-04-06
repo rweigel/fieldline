@@ -22,6 +22,9 @@ def trace(IC, Field, debug=False):
             return (sign/Fmag)*F
         return [0., 0., 0.]
 
+    #def dXds(X, s):
+    #    return sign*Field(X)
+
     s_grid = np.arange(0., 10., 0.1)
     max_iterations = 100
 
@@ -141,10 +144,10 @@ def trace_vtk(IC, vtk_object, debug=False, var='b', celldata=True):
             raise ValueError ('not a supported vtk object for streamlines')
 
         streamer.SetStartPosition(X0) #cannot pass multiple IC's in an array
-        streamer.SetMaximumPropagation(20) ###
+        streamer.SetMaximumPropagation(400) ###
         #streamer.SetIntegrationStepUnit(2) # apperars overiden by next lines, see https://vtk.org/doc/nightly/html/classvtkStreamTracer.html#afe365e81e110f354065f5adc8401d589
-        streamer.SetMinimumIntegrationStep(0.01)
-        streamer.SetMaximumIntegrationStep(0.1)
+        streamer.SetMinimumIntegrationStep(0.00001)
+        streamer.SetMaximumIntegrationStep(0.2)
         streamer.SetInitialIntegrationStep(0.01)
         #streamer.SetIntegrationDirection()
         #streamer.SetIntegrationDirectionToForward()
@@ -152,7 +155,7 @@ def trace_vtk(IC, vtk_object, debug=False, var='b', celldata=True):
         #streamer.SetIntegrationDirectionToBoth()
         streamer.SetIntegrator(rk)
         streamer.SetRotationScale(0.5)
-        streamer.SetMaximumError(1.0e-8)
+        streamer.SetMaximumError(1.0e-5)
         #https://stackoverflow.com/questions/38504907/reading-a-vtk-polydata-file-and-converting-it-into-numpy-array
         ## either order works ##
         polydata = streamer.GetOutput()

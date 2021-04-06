@@ -7,6 +7,23 @@ import matplotlib.pyplot as plt
 from fieldline import trace
 
 
+def generate_northern_hemisphere(R,Nt,Np):
+    theta = np.linspace(0,np.pi/2.,Nt+2)[1:-1]
+    phi = np.linspace(0,2.*np.pi,Np+2)[1:-1]
+
+    B1, B2 = np.meshgrid(phi, theta)
+    B1 = B1.flatten(order='C')
+    B2 = B2.flatten(order='C')
+
+    PI = np.pi*np.ones((B1.size, ))
+    x = R*np.cos(B1+PI)*np.sin(B2)
+    y = R*np.sin(B1+PI)*np.sin(B2)
+    z = R*np.cos(B2)
+    XYZ = np.column_stack((x, y, z))
+
+    return XYZ
+    
+
 def urlretrieve(url, fname):
     print('\ndownloading %s from %s\n'%(fname,url))
     import urllib, urllib2, ssl
@@ -73,20 +90,27 @@ def demo1(fname=None):
     plt.clf()
 
 
-def demo2(ftag=None):
+def demo2(ftag=None, writevtk=False):
     '''
-    inputs: ftag
+    traces field line with seed points along spaced out on 
+    the positive Z (in GSM) half of a sphere of radius 2 R_E.
+
+    inputs:
+      ftag:
         set to the filename (including path if specified) of the swmf files, without the extension.
         e.g. '/home/gary/temp/3d__var_3_e20031120-070000-000'
         default: None, which downloads example files from the internet
+      writevtk:
+        boolean, default False. If True, it writes out a Polyline vtk file for each field line
+        that can be loaded into paraview. Otherwise it doesn't, and just plots with matplotlib.
 
-    traces field line with seed points along a line connecting (-1,1,1) and (-1,-1,-1) in GSM
     in resuling plot:
-        red   : shows the seed points line, and the location of the origin (0,0,0)
+        red   : shows the seed points
         blue  : shows the result of tracing via scipy's nearest neighbor interpolator on native grid
         green : shows the result of vtk's interpolation.
     '''
     from swmf_file_reader import read_swmf_files as rswmf
+    from swmf_file_reader.vtk_export_copy import vtk_export
 
     ## download example data files if none provided
     if ftag is None:
@@ -98,7 +122,8 @@ def demo2(ftag=None):
             urlretrieve(urltag+'.out' , ftag+'.out' )
 
     ## set seed points
-    IC = np.column_stack([-np.ones(17), np.linspace(-1.,1.,17), np.linspace(-1.,1.,17)])
+    #IC = np.column_stack([-np.ones(17), np.linspace(-2.,2.,17), np.linspace(-2.,2.,17)])
+    IC = generate_northern_hemisphere(2.,7,7)
 
     ## if not already existing, make vtk file from swmf .out file, to be used in tracing
     if not os.path.exists(ftag+'.vtk'):
@@ -119,27 +144,32 @@ def demo2(ftag=None):
         ax.plot(scipy_NearestNeighbor_method[i][:,0],
                 scipy_NearestNeighbor_method[i][:,1],
                 scipy_NearestNeighbor_method[i][:,2],
-                color='b')
+                color='b',marker='.',alpha=0.5)
 
         ax.plot(vtk_method[i][:,0],
                 vtk_method[i][:,1],
                 vtk_method[i][:,2],
-                color='g')
+                color='g',marker='.',alpha=0.5)
 
-    ax.plot(IC[:,0],
-            IC[:,1],
-            IC[:,2],
-            color='r')
+        if writevtk:
+            print('i=%d'%(i))
+            print('IC[i,:]='+str(IC[i,:]))
+            vtk_export('NN_%.2d.vtk'%(i), scipy_NearestNeighbor_method[i],
+                                dataset = 'POLYDATA',
+                                connectivity = 'LINES',ftype='ASCII')
+            vtk_export('VTK_%.2d.vtk'%(i), vtk_method[i],
+                                dataset = 'POLYDATA',
+                                connectivity = 'LINES',ftype='ASCII')
 
-    ax.plot(np.array([0.]),
-            np.array([0.]),
-            np.array([0.]),
-            color='r',
-            marker='o')
+    ax.scatter(IC[:,0],
+               IC[:,1],
+               IC[:,2],
+               color='r',
+               marker='o')
 
-    ax.set_xlim(-4.,4.)
-    ax.set_ylim(-4.,4.)
-    ax.set_zlim(-4.,4.)
+    ax.set_xlim(-5.,5.)
+    ax.set_ylim(-5.,5.)
+    ax.set_zlim(-5.,5.)
 
     plt.show()
     plt.clf()
