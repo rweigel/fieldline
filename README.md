@@ -1,7 +1,7 @@
 # fieldline
 Python package for tracing field lines using multiple methods and libraries
 
-Tested for python 2.7 and 3.7
+Tested for python 2.7.18 and 3.7.9
 
 ## install
 

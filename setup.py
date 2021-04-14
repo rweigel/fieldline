@@ -6,7 +6,7 @@ install_requires = ["numpy","scipy","vtk","matplotlib", "urllib3",
 
 setup(
     name='fieldline',
-    version='0.0.1',
+    version='0.0.1.1',
     author='Gary Quaresima, Bob Weigel',
     author_email='rweigel@gmu.edu',
     packages=find_packages(),
