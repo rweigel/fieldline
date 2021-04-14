@@ -7,23 +7,25 @@ from vtk.vtkCommonDataModel import vtkDataSet
 from vtk.vtkCommonExecutionModel import vtkAlgorithmOutput
 
 
-def trace(IC, Field, debug=False):
+def trace(IC, Field, integration_direction='backward', debug=False):
     import types
     assert isinstance(Field, types.FunctionType)
 
-    sign = -1
+    if integration_direction in ['northern', 'negative', 'backward']:
+        sign = -1
+    elif integration_direction in ['southern', 'positive', 'forward']:
+        sign = +1
+    else:
+        raise ValueError(str(integration_direction)+' not a valid integration_direction')
 
-    from scipy.integrate import odeint
+    from scipy.integrate import odeint, solve_ivp
 
-    def dXds(X, s):
+    def dXds(s, X):
         F = Field(X)
         Fmag = np.linalg.norm(F)
         if 1e-9 < Fmag < 1e+7:
             return (sign/Fmag)*F
         return [0., 0., 0.]
-
-    #def dXds(X, s):
-    #    return sign*Field(X)
 
     s_grid = np.arange(0., 10., 0.1)
     max_iterations = 100
@@ -41,7 +43,11 @@ def trace(IC, Field, debug=False):
         while not done:
             if debug:
                 print('i = ' + str(i))
-            soln = odeint(dXds, X0, s_grid)
+
+            #soln = odeint(dXds, X0, s_grid, tfirst=True)
+            soln = solve_ivp(dXds, [0, 10], X0, t_eval=s_grid).y.transpose()
+            if debug: print('hellothere')
+
             R = soln[:, 0]**2 + soln[:, 1]**2 + soln[:, 2]**2
             # define condition on the field line points
             # Find first location where soln steps out-of-bounds
@@ -60,7 +66,7 @@ def trace(IC, Field, debug=False):
                 solns = np.vstack((solns, soln[0:tr_out[0][0] + 1, :]))
                 done = True
             elif max_iterations == i + 1:
-                solns = np.vstack((solns, soln))   # return soln   faster?
+                solns = np.vstack((solns, soln))
                 done = True
             else:
                 # New initial condition is stop point.
@@ -77,7 +83,7 @@ def trace(IC, Field, debug=False):
     return ret
 
 
-def interpolate_and_trace(IC, Field, Domain, debug=False):
+def interpolate_and_trace(IC, Field, Domain, integration_direction='backward', debug=False):
     from scipy.interpolate import RegularGridInterpolator, NearestNDInterpolator
 
     Field = np.array(Field)
@@ -111,10 +117,19 @@ def interpolate_and_trace(IC, Field, Domain, debug=False):
         def Fcallable(v):
             return np.array([Fx_interp(v)[0], Fy_interp(v)[0], Fz_interp(v)[0]])
 
-    return trace(IC, Fcallable, debug=debug)
+    return trace(IC, Fcallable, integration_direction=integration_direction, debug=debug)
 
 # see magnetosphere/misc/vtk/streamline_from_datafile_demo.py
-def trace_vtk(IC, vtk_object, debug=False, var='b', celldata=True):
+def trace_vtk(IC, vtk_object, integration_direction='backward', debug=False, var='b', celldata=True):
+    if integration_direction in ['northern', 'negative', 'backward']:
+        vtk_int_dir = vtk.VTK_INTEGRATE_BACKWARD # = 1
+    elif integration_direction in ['southern', 'positive', 'forward']:
+        vtk_int_dir = vtk.VTK_INTEGRATE_FORWARD # = 0
+    elif integration_direction in ['both']:
+        vtk_int_dir = vtk.VTK_INTEGRATE_BOTH_DIRECTIONS # = 2
+    else:
+        raise ValueError(str(integration_direction)+' not a valid integration_direction')
+
     if celldata:
         vtk_object.GetCellData().SetActiveVectors(var)
         c2p = vtk.vtkCellDataToPointData()
@@ -149,10 +164,7 @@ def trace_vtk(IC, vtk_object, debug=False, var='b', celldata=True):
         streamer.SetMinimumIntegrationStep(0.00001)
         streamer.SetMaximumIntegrationStep(0.2)
         streamer.SetInitialIntegrationStep(0.01)
-        #streamer.SetIntegrationDirection()
-        #streamer.SetIntegrationDirectionToForward()
-        streamer.SetIntegrationDirectionToBackward()
-        #streamer.SetIntegrationDirectionToBoth()
+        streamer.SetIntegrationDirection(vtk_int_dir)
         streamer.SetIntegrator(rk)
         streamer.SetRotationScale(0.5)
         streamer.SetMaximumError(1.0e-5)
@@ -167,7 +179,7 @@ def trace_vtk(IC, vtk_object, debug=False, var='b', celldata=True):
 
     return ret
 
-def trace_file(IC, filename, method='vtk', debug=False):
+def trace_file(IC, filename, method='vtk', integration_direction='backward', debug=False):
     if not os.path.exists(filename): raise FileNotFoundError ('no file ' + fname)
     ext = filename[-4:]
 
@@ -186,7 +198,7 @@ def trace_file(IC, filename, method='vtk', debug=False):
             B[:,1] = data3d['by']
             B[:,2] = data3d['bz']
 
-            return interpolate_and_trace(IC, B, X, debug=debug)
+            return interpolate_and_trace(IC, B, X, integration_direction=integration_direction, debug=debug)
         elif ext == '.cdf':
             pass # TODO: intepolate using kameleon onto regular grid then pass to interpolate_and_trace
         else:
@@ -205,18 +217,10 @@ def trace_file(IC, filename, method='vtk', debug=False):
             # get nessesary vtk info from Reader object
             reader_output = reader.GetOutput() #not the "New Pipelin"
 
-            return trace_vtk(IC, reader_output, debug=debug)
+            return trace_vtk(IC, reader_output, integration_direction=integration_direction, debug=debug)
         elif ext == '.out':
             VTKfilename = filename[:-4]+'.vtk'
-
-            ## if not already existing, make vtk file from swmf .out file, to be used in tracing
-            #if not os.path.exists(fname[:-4]+'.vtk'):
-            #    print('\n\ngenerating vtk file\n\n')
-            #    rswmf.swmf2vtk(fname[:-4])
-            #else:
-            #    print('\n\nusing existing vtk file\n\n')
-
-            return traceFile(VTKfilename, IC, method=method, debug=debug)
+            return traceFile(VTKfilename, IC, method=method, integration_direction=integration_direction, debug=debug)
         elif ext == '.cdf':
             raise RuntimeWarning ('should it be allowed?') #!!!!
         else:

@@ -22,24 +22,19 @@ def generate_northern_hemisphere(R,Nt,Np):
     XYZ = np.column_stack((x, y, z))
 
     return XYZ
-    
 
 def urlretrieve(url, fname):
     print('\ndownloading %s from %s\n'%(fname,url))
-    import urllib, urllib2, ssl
-    try:
-        context = ssl._create_unverified_context()
-        urllib2.urlopen(url) 
-        res = urllib.urlretrieve(url, fname, context=context)
-        return res
-#https://stackoverflow.com/questions/16778435/python-check-if-website-exists
-    except urllib2.HTTPError, e: 
-        return(e.code)
-    except urllib2.URLError, e:
-        return(e.args)
-    except ValueError:
-        print("'" + url + "' is not a valid URL")
+    import urllib3
+    import shutil
+    http = urllib3.PoolManager()
 
+    with http.request('GET', url, preload_content=False) as req:
+        if req.status == 200:
+            with open(fname,'wb') as fl:
+                shutil.copyfileobj(req, fl)
+        else:
+            raise ConnectionError ('error in dowloading from '+url)
 
 def demo1(fname=None):
     '''
@@ -69,12 +64,12 @@ def demo1(fname=None):
         ax.plot(scipy_NearestNeighbor_method[i][:,0],
                 scipy_NearestNeighbor_method[i][:,1],
                 scipy_NearestNeighbor_method[i][:,2],
-                color='b')
+                color='b',marker='.',alpha=0.5)
 
     ax.plot(IC[:,0],
             IC[:,1],
             IC[:,2],
-            color='r')
+            color='r',marker='o')
 
     ax.plot(np.array([0.]),
             np.array([0.]),
@@ -133,8 +128,10 @@ def demo2(ftag=None, writevtk=False):
         print('\n\nusing existing vtk file\n\n')
 
     ## trace 
-    scipy_NearestNeighbor_method = trace.trace_file(IC, ftag+'.out', method='scipy', debug=False)
-    vtk_method                   = trace.trace_file(IC, ftag+'.vtk', method='vtk', debug=False)
+    scipy_NearestNeighbor_method = trace.trace_file(IC, ftag+'.out', 
+                                    method='scipy', integration_direction='northern')
+    vtk_method                   = trace.trace_file(IC, ftag+'.vtk',
+                                    method='vtk',   integration_direction='northern')
 
     ## plot the result
     fig = plt.figure()
