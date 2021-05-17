@@ -15,7 +15,7 @@ def trace(IC, Field, integration_direction='backward', debug=False):
         sign = -1
     elif integration_direction in ['southern', 'positive', 'forward']:
         sign = +1
-    else:
+    else: #todo: add a both option like vtk
         raise ValueError(str(integration_direction)+' not a valid integration_direction')
 
     from scipy.integrate import odeint, solve_ivp
@@ -30,6 +30,7 @@ def trace(IC, Field, integration_direction='backward', debug=False):
     s_grid = np.arange(0., 10., 0.1)
     max_iterations = 100
 
+    IC = np.array(IC)
     if IC.shape == (3,):
         IC = [IC]
     ret = []
@@ -139,6 +140,7 @@ def trace_vtk(IC, vtk_object, integration_direction='backward', debug=False, var
         vtk_object.GetPointData().SetActiveVectors(var)
         tostreamer = vtk_object
 
+    IC = np.array(IC)
     if IC.shape == (3,):
         IC = [IC]
     ret = []
@@ -159,21 +161,45 @@ def trace_vtk(IC, vtk_object, integration_direction='backward', debug=False, var
             raise ValueError ('not a supported vtk object for streamlines')
 
         streamer.SetStartPosition(X0) #cannot pass multiple IC's in an array
-        streamer.SetMaximumPropagation(400) ###
+        streamer.SetMaximumPropagation(400)
         #streamer.SetIntegrationStepUnit(2) # apperars overiden by next lines, see https://vtk.org/doc/nightly/html/classvtkStreamTracer.html#afe365e81e110f354065f5adc8401d589
         streamer.SetMinimumIntegrationStep(0.00001)
-        streamer.SetMaximumIntegrationStep(0.2)
-        streamer.SetInitialIntegrationStep(0.01)
+        streamer.SetMaximumIntegrationStep(0.5)
+        streamer.SetInitialIntegrationStep(0.0001)
         streamer.SetIntegrationDirection(vtk_int_dir)
         streamer.SetIntegrator(rk)
         streamer.SetRotationScale(0.5)
         streamer.SetMaximumError(1.0e-5)
+        #print(streamer.GetMaximumNumberOfSteps())
+        streamer.SetMaximumNumberOfSteps(2_000) # 2000 is the default
         #https://stackoverflow.com/questions/38504907/reading-a-vtk-polydata-file-and-converting-it-into-numpy-array
         ## either order works ##
         polydata = streamer.GetOutput()
         streamer.Update() # forces the computation of the stream lines
 
-        ret.append( dsa.WrapDataObject(polydata).Points ) # convert the result to array and put in list
+        wrapped = dsa.WrapDataObject(polydata)
+        #print(np.all(wrapped.Points == wrapped.GetPoints())) --> True
+        #print(wrapped.PointData) ; print( wrapped.GetPointData()) --> same object type at same memory address
+        #print(wrapped) ; print(wrapped.PointData.DataSet) --> same object type at same memory address
+
+        print(dir(wrapped.PointData))
+        # wrapped has keys and values methods, so could do: 
+        b_array = wrapped.PointData['b']
+        # or alternatively there is a c style method:
+        b_array = wrapped.PointData.GetArray('b')
+        # the available arrays can be printed as 
+        print( wrapped.PointData.keys() )
+
+        print("b array:")
+        print(b_array)
+        print("IntegrationTime array:")
+        print(wrapped.PointData['IntegrationTime'])
+        print('###\n\n')
+
+        print(wrapped.CellData.keys())
+        print(wrapped.CellData['ReasonForTermination'])
+
+        ret.append( wrapped.Points ) # convert the result to array and put in list
         del polydata 
         del streamer
 
@@ -229,4 +255,3 @@ def trace_file(IC, filename, method='vtk', integration_direction='backward', deb
     elif method == 'kameleon':
         if ext!='.cdf' : raise ValueError('need a CDF file, currently no way to make it')
         #TODO: use kameleons field line tracer.
-
