@@ -229,6 +229,32 @@ def demo4(ftag=None):
     plt.show()
     plt.clf()
 
+def demo5():
+    import vtk
+    from vtk.numpy_interface import dataset_adapter as dsa
+
+    xax = 1.*np.arange(20)
+    yax = 10.*np.arange(30)
+    zax = .1*np.arange(40)
+
+    Y, Z, X = np.meshgrid(yax, zax, xax)
+    P = np.column_stack([X.flatten(), Y.flatten(), Z.flatten()])
+    B = P**2
+
+    Pvtk = dsa.numpyTovtkDataArray(P)
+    points = vtk.vtkPoints()
+    points.SetData(Pvtk)
+    sg = vtk.vtkStructuredGrid()
+    sg.SetDimensions((2,3,4))
+    sg.SetPoints(points)
+
+    Bvtk = dsa.numpyTovtkDataArray(P)
+    arrind = sg.GetPointData().AddArray(Bvtk)
+    sg.GetPointData().GetArray(arrind).SetName('b')
+
+    ret = trace.trace_vtk(IC, sg, var='b', celldata=False)
+
+
 #python -c "from fieldline import demos; demos.trace_file_write((-0.50700265,-0.8013271,3.981049),'/tmp/3d__var_2_e20190902-041000-000.vtk', method='vtk')"
 def trace_file_write(*args, **kwargs):
     from swmf_file_reader.vtk_export_copy import vtk_export

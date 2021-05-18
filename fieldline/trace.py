@@ -15,7 +15,7 @@ def trace(IC, Field, integration_direction='backward', debug=False):
         sign = -1
     elif integration_direction in ['southern', 'positive', 'forward']:
         sign = +1
-    else: #todo: add a both option like vtk
+    else: #todo: add a 'both' option like vtk
         raise ValueError(str(integration_direction)+' not a valid integration_direction')
 
     from scipy.integrate import odeint, solve_ivp
@@ -27,6 +27,14 @@ def trace(IC, Field, integration_direction='backward', debug=False):
             return (sign/Fmag)*F
         return [0., 0., 0.]
 
+    def bounds_func(s, X):
+        R = np.linalg.norm(X)
+        if (R > 0.99) and (X[0] > -30.) and (abs(X[1]) < 20.) and (abs(X[2]) < 20.):
+            return 1.
+        return -1.
+    bounds_func.terminal = True
+    bounds_func.direction = -1
+
     s_grid = np.arange(0., 10., 0.1)
     max_iterations = 100
 
@@ -35,48 +43,13 @@ def trace(IC, Field, integration_direction='backward', debug=False):
         IC = [IC]
     ret = []
     linenum = 0
+
     for X0 in list(IC):
         if debug:
             print('linenum = ' + str(linenum))
-        done = False
-        solns = np.empty((0, 3)) # Combined solutions
-        i = 0
-        while not done:
-            if debug:
-                print('i = ' + str(i))
 
-            #soln = odeint(dXds, X0, s_grid, tfirst=True)
-            soln = solve_ivp(dXds, [0, 10], X0, t_eval=s_grid).y.transpose()
-            if debug: print('hellothere')
-
-            R = soln[:, 0]**2 + soln[:, 1]**2 + soln[:, 2]**2
-            # define condition on the field line points
-            # Find first location where soln steps out-of-bounds
-            #tr = np.where( False == (R >= 1) & (soln[:,0] > -30.) & (np.abs(soln[:, 2]) < 20.) )        
-            # Boolean array.
-
-            tr = (R >= 1) & (soln[:,0] > -30.) & (np.abs(soln[:, 2]) < 20.)
-            # RuntimeWarning: invalid value encountered in greater_equal
-
-            # Indices where stop conditions satisfied
-            tr_out = np.where(tr == False)
-            if debug:
-                print(tr)
-            if tr_out[0].size > 0:
-                # Stop condition found at least once. Use solution up to that point.s
-                solns = np.vstack((solns, soln[0:tr_out[0][0] + 1, :]))
-                done = True
-            elif max_iterations == i + 1:
-                solns = np.vstack((solns, soln))
-                done = True
-            else:
-                # New initial condition is stop point.
-                X0 = soln[-1, :]
-                # Append solution but exclude last value, which is the
-                # new initial condition.
-                solns = np.vstack((solns, soln[0:-1, :]))
-            i = i + 1
-        ret.append(solns)
+        sol = solve_ivp(dXds, [0, 200], X0, t_eval=np.linspace(0,200,1601), events=bounds_func).y.transpose()
+        ret.append(sol)
         linenum += 1
 
     if len(ret) == 1:
@@ -146,9 +119,7 @@ def trace_vtk(IC, vtk_object, integration_direction='backward', debug=False, var
     ret = []
     linenum = 0
     for X0 in list(IC):
-        # Create integrator
         rk = vtk.vtkRungeKutta45()
-        # Create source for streamtubes
         streamer = vtk.vtkStreamTracer()
 
         if isinstance(tostreamer, vtkDataSet):
@@ -162,7 +133,6 @@ def trace_vtk(IC, vtk_object, integration_direction='backward', debug=False, var
 
         streamer.SetStartPosition(X0) #cannot pass multiple IC's in an array
         streamer.SetMaximumPropagation(400)
-        #streamer.SetIntegrationStepUnit(2) # apperars overiden by next lines, see https://vtk.org/doc/nightly/html/classvtkStreamTracer.html#afe365e81e110f354065f5adc8401d589
         streamer.SetMinimumIntegrationStep(0.00001)
         streamer.SetMaximumIntegrationStep(0.5)
         streamer.SetInitialIntegrationStep(0.0001)
@@ -170,34 +140,23 @@ def trace_vtk(IC, vtk_object, integration_direction='backward', debug=False, var
         streamer.SetIntegrator(rk)
         streamer.SetRotationScale(0.5)
         streamer.SetMaximumError(1.0e-5)
-        #print(streamer.GetMaximumNumberOfSteps())
         streamer.SetMaximumNumberOfSteps(2_000) # 2000 is the default
         #https://stackoverflow.com/questions/38504907/reading-a-vtk-polydata-file-and-converting-it-into-numpy-array
-        ## either order works ##
         polydata = streamer.GetOutput()
         streamer.Update() # forces the computation of the stream lines
 
         wrapped = dsa.WrapDataObject(polydata)
-        #print(np.all(wrapped.Points == wrapped.GetPoints())) --> True
-        #print(wrapped.PointData) ; print( wrapped.GetPointData()) --> same object type at same memory address
-        #print(wrapped) ; print(wrapped.PointData.DataSet) --> same object type at same memory address
 
-        print(dir(wrapped.PointData))
-        # wrapped has keys and values methods, so could do: 
-        b_array = wrapped.PointData['b']
-        # or alternatively there is a c style method:
-        b_array = wrapped.PointData.GetArray('b')
-        # the available arrays can be printed as 
-        print( wrapped.PointData.keys() )
-
-        print("b array:")
-        print(b_array)
-        print("IntegrationTime array:")
-        print(wrapped.PointData['IntegrationTime'])
-        print('###\n\n')
-
-        print(wrapped.CellData.keys())
-        print(wrapped.CellData['ReasonForTermination'])
+        ##print(np.all(wrapped.Points == wrapped.GetPoints())) --> True
+        ##print(wrapped.PointData) ; print( wrapped.GetPointData()) --> same object type at same memory address
+        ##print(wrapped) ; print(wrapped.PointData.DataSet) --> same object type at same memory address
+        ## wrapped has keys and values methods, so could do: 
+        #b_array = wrapped.PointData['b']
+        ## or alternatively there is a c style method:
+        #b_array = wrapped.PointData.GetArray('b')
+        ## the available arrays can be printed as 
+        #print(wrapped.PointData['IntegrationTime'] )
+        #print(wrapped.CellData['ReasonForTermination'])
 
         ret.append( wrapped.Points ) # convert the result to array and put in list
         del polydata 
