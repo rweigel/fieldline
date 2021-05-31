@@ -3,6 +3,8 @@ import sys
 import numpy as np
 from mpl_toolkits.mplot3d import Axes3D
 import matplotlib.pyplot as plt
+import vtk
+from vtk.numpy_interface import dataset_adapter as dsa
 
 from fieldline import trace
 
@@ -196,17 +198,17 @@ def demo4(ftag=None):
                                     method='vtk',   integration_direction='northern')[0]
     print(vtk_method.shape)
     print(vtk_method)
-    print(np.all(vtk_method[0,:] == IC))
-    print(np.all(vtk_method[0,:] == np.array(IC,dtype=np.float32)))
-    print(IC.dtype)
-    print(IC[:])
-    print(vtk_method.dtype)
-    print(vtk_method[0,:])
-    print(vtk_method.dtype)
-    print(vtk_method[-1,:])
-    print(vtk_method[-1,0])
-    print(vtk_method[-1,1])
-    print(vtk_method[-1,2])
+    #print(np.all(vtk_method[0,:] == IC))
+    #print(np.all(vtk_method[0,:] == np.array(IC,dtype=np.float32)))
+    #print(IC.dtype)
+    #print(IC[:])
+    #print(vtk_method.dtype)
+    #print(vtk_method[0,:])
+    #print(vtk_method.dtype)
+    #print(vtk_method[-1,:])
+    #print(vtk_method[-1,0])
+    #print(vtk_method[-1,1])
+    #print(vtk_method[-1,2])
 
     ## plot the result
     fig = plt.figure()
@@ -230,29 +232,63 @@ def demo4(ftag=None):
     plt.clf()
 
 def demo5():
-    import vtk
-    from vtk.numpy_interface import dataset_adapter as dsa
-
     xax = 1.*np.arange(20)
-    yax = 10.*np.arange(30)
-    zax = .1*np.arange(40)
+    yax = 0.5*np.arange(30)
+    zax = 0.75*np.arange(40)
 
     Y, Z, X = np.meshgrid(yax, zax, xax)
     P = np.column_stack([X.flatten(), Y.flatten(), Z.flatten()])
-    B = P**2
 
     Pvtk = dsa.numpyTovtkDataArray(P)
     points = vtk.vtkPoints()
     points.SetData(Pvtk)
     sg = vtk.vtkStructuredGrid()
-    sg.SetDimensions((2,3,4))
+    sg.SetDimensions((20,30,40))
     sg.SetPoints(points)
 
-    Bvtk = dsa.numpyTovtkDataArray(P)
+    Bvtk = dsa.numpyTovtkDataArray(B_dipole(P))
     arrind = sg.GetPointData().AddArray(Bvtk)
     sg.GetPointData().GetArray(arrind).SetName('b')
 
+    IC = np.column_stack([np.linspace(1.,10.,17), np.linspace(1.,10.,17), np.linspace(1.,10.,17)])
     ret = trace.trace_vtk(IC, sg, var='b', celldata=False)
+    print(ret)
+    ## plot the result
+    fig = plt.figure()
+    ax = fig.add_subplot(111, projection='3d')
+
+    for i in range(IC.shape[0]):
+        ax.plot(ret[i][:,0],
+                ret[i][:,1],
+                ret[i][:,2],
+                color='b',marker='.',alpha=0.5)
+
+    ax.scatter(IC[:,0],
+               IC[:,1],
+               IC[:,2],
+               color='r',
+               marker='o')
+
+    #ax.set_xlim(-5.,5.)
+    #ax.set_ylim(-5.,5.)
+    #ax.set_zlim(-5.,5.)
+
+    plt.show()
+    plt.clf()
+
+
+def B_dipole(X):
+    assert(X.shape[1]==3)
+
+    DipoleStrength = 3.12e+4 #"dipole moment"(not really) in  nT * R_e**3  # https://en.wikipedia.org/wiki/Dipole_model_of_the_Earth%27s_magnetic_field
+    M = np.array([0,0,DipoleStrength], dtype=np.float32)
+
+    ret = np.empty(X.shape, dtype=np.float32)
+    divr = 1./np.sqrt(X[:,0]**2 + X[:,1]**2 + X[:,2]**2)
+    ret[:,0] = ( 3.*(M[0]*X[:,0]+M[1]*X[:,1]+M[2]*X[:,2])*divr**5 )* X[:,0]  -  (divr**3)*M[0]
+    ret[:,1] = ( 3.*(M[0]*X[:,0]+M[1]*X[:,1]+M[2]*X[:,2])*divr**5 )* X[:,1]  -  (divr**3)*M[1]
+    ret[:,2] = ( 3.*(M[0]*X[:,0]+M[1]*X[:,1]+M[2]*X[:,2])*divr**5 )* X[:,2]  -  (divr**3)*M[2]
+    return ret
 
 
 #python -c "from fieldline import demos; demos.trace_file_write((-0.50700265,-0.8013271,3.981049),'/tmp/3d__var_2_e20190902-041000-000.vtk', method='vtk')"

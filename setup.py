@@ -1,8 +1,7 @@
 from setuptools import setup, find_packages
 
 install_requires = ["numpy","scipy","vtk","matplotlib", "urllib3",
-                "swmf-file-reader"]
-#            "git+https://github.com/GaryQ-physics/swmf_file_reader.git"]
+            "swmf-file-reader @ git+https://github.com/GaryQ-physics/swmf_file_reader.git"]
 
 setup(
     name='fieldline',

@@ -133,9 +133,9 @@ def trace_vtk(IC, vtk_object, integration_direction='backward', debug=False, var
 
         streamer.SetStartPosition(X0) #cannot pass multiple IC's in an array
         streamer.SetMaximumPropagation(400)
-        streamer.SetMinimumIntegrationStep(0.00001)
-        streamer.SetMaximumIntegrationStep(0.5)
-        streamer.SetInitialIntegrationStep(0.0001)
+        streamer.SetMinimumIntegrationStep(1e-9)
+        streamer.SetMaximumIntegrationStep(0.1)
+        streamer.SetInitialIntegrationStep(1e-6)
         streamer.SetIntegrationDirection(vtk_int_dir)
         streamer.SetIntegrator(rk)
         streamer.SetRotationScale(0.5)
