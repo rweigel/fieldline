@@ -185,6 +185,8 @@ def trace_file(IC, filename, method='vtk', integration_direction='backward', deb
 
     if method == 'scipy':
         if ext == '.out':
+            # TODO: Remove dependency on SpacePy? Large complex page and we are using
+            # basically one script. Is it possible to use swmfio instead?
             import spacepy.pybats.bats as bats
             data3d = bats.Bats2d(filename)
 
