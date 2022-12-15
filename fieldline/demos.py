@@ -173,4 +173,5 @@ def demo2(ftag=None, writevtk=False):
 
 
 def demo3(fname=None):
+    # Not working
     kameleon_method = trace.trace_file(IC, fname+'.cdf', method='kameleon', debug=True)

@@ -7,7 +7,11 @@ from vtk.vtkCommonDataModel import vtkDataSet
 from vtk.vtkCommonExecutionModel import vtkAlgorithmOutput
 
 
+#def analytic(IC, Field, integration_direction='backward', debug=False):
 def trace(IC, Field, integration_direction='backward', debug=False):
+
+    from scipy.integrate import solve_ivp
+    #from scipy.integrate import odeint
     import types
     assert isinstance(Field, types.FunctionType)
 
@@ -16,9 +20,8 @@ def trace(IC, Field, integration_direction='backward', debug=False):
     elif integration_direction in ['southern', 'positive', 'forward']:
         sign = +1
     else:
-        raise ValueError(str(integration_direction)+' not a valid integration_direction')
-
-    from scipy.integrate import odeint, solve_ivp
+        raise ValueError('"' + str(integration_direction)
+                         + '" is not a valid integration_direction value')
 
     def dXds(s, X):
         F = Field(X)
@@ -83,6 +86,7 @@ def trace(IC, Field, integration_direction='backward', debug=False):
     return ret
 
 
+#def points(IC, Field, Domain, integration_direction='backward', debug=False):
 def interpolate_and_trace(IC, Field, Domain, integration_direction='backward', debug=False):
     from scipy.interpolate import RegularGridInterpolator, NearestNDInterpolator
 
@@ -120,6 +124,7 @@ def interpolate_and_trace(IC, Field, Domain, integration_direction='backward', d
     return trace(IC, Fcallable, integration_direction=integration_direction, debug=debug)
 
 # see magnetosphere/misc/vtk/streamline_from_datafile_demo.py
+# def vtk(IC, vtk_object, integration_direction='backward', debug=False, var='b', celldata=True):
 def trace_vtk(IC, vtk_object, integration_direction='backward', debug=False, var='b', celldata=True):
     if integration_direction in ['northern', 'negative', 'backward']:
         vtk_int_dir = vtk.VTK_INTEGRATE_BACKWARD # = 1
@@ -179,6 +184,7 @@ def trace_vtk(IC, vtk_object, integration_direction='backward', debug=False, var
 
     return ret
 
+# def file(IC, filename, method='vtk', integration_direction='backward', debug=False):
 def trace_file(IC, filename, method='vtk', integration_direction='backward', debug=False):
     if not os.path.exists(filename): raise FileNotFoundError ('no file ' + fname)
     ext = filename[-4:]
