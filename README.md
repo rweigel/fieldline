@@ -25,16 +25,11 @@ pip install --editable .
 
 ### Dependency Note
 
-This package has an optional dependency on "swmf_file_reader",
-which will not be automatically installed since it is not on PyPi.
+This package has an optional dependency on `swmf_file_reader`, which will not be automatically installed since it is not on PyPi.
 
-As such, follow the installation instructions at
-![https://github.com/GaryQ-physics/swmf_file_reader](https://github.com/GaryQ-physics/swmf_file_reader)
-before continuing.
+As such, follow the installation instructions at [swmfio](https://github.com/GaryQ-physics/swmfio) before continuing.
 
-"swmf_file_reader" is used to convert SWMF's output files to VTK for fieldline
-tracing using the VTK library. If this functionality isn't desired, then it
-can be left out.
+`swmf_file_reader` is used to convert SWMF's output files to VTK for fieldline tracing using the VTK library. If this functionality isn't desired, then it can be left out.
 
 ## See also
 
